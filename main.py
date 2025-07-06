@@ -1,59 +1,29 @@
-from telethon import TelegramClient, events import re import threading import http.server import socketserver import os
+from telethon import TelegramClient, events
+import re
+import threading
+import http.server
+import socketserver
+import os
 
-=== Get from Environment Variables ===
+# === Get from Environment Variables ===
+api_id = int(os.getenv("API_ID"))
+api_hash = os.getenv("API_HASH")
+phone_number = os.getenv("PHONE_NUMBER")
 
-api_id = int(os.getenv("API_ID")) api_hash = os.getenv("API_HASH") phone_number = os.getenv("PHONE_NUMBER")
+SOURCE_CHANNELS = os.getenv("SOURCE_CHANNELS").split(",")
+DESTINATION_CHANNELS = os.getenv("DESTINATION_CHANNELS").split(",")
 
-SOURCE_CHANNELS = os.getenv("SOURCE_CHANNELS").split(",")  # Only public usernames like 'mychannel' DESTINATION_CHANNELS = os.getenv("DESTINATION_CHANNELS").split(",")
-
-=== Pattern to Detect MQM Code ===
-
+# === Pattern to Detect MQM Code ===
 MQM_PATTERN = re.compile(r"\bMQM[A-Z0-9]{5,10}\b")
 
-=== Telegram Client ===
-
+# === Telegram Client ===
 client = TelegramClient("session", api_id, api_hash)
 
-async def get_sources(): sources = []
-
-# Add public channels
-for name in SOURCE_CHANNELS:
-    try:
-        entity = await client.get_entity(name)
-        sources.append(entity)
-    except Exception as e:
-        print(f"❌ Failed to add source {name}: {e}")
-
-# Add private invite link entity (replace with your actual link)
-try:
-    private_entity = await client.get_entity("https://t.me/+2uqQOrERS0llNzE1")
-    sources.append(private_entity)
-except Exception as e:
-    print(f"❌ Failed to add private channel: {e}")
-
-return sources
-
-=== Web Server for Uptime (Render) ===
-
-PORT = 8080 Handler = http.server.SimpleHTTPRequestHandler
-
-class QuietHTTPRequestHandler(Handler): def log_message(self, format, *args): pass
-
-def start_server(): with socketserver.TCPServer(("0.0.0.0", PORT), QuietHTTPRequestHandler) as httpd: print(f"🌐 Web server running on port {PORT}") httpd.serve_forever()
-
-Start Web Server
-
-thread = threading.Thread(target=start_server) thread.daemon = True thread.start()
-
-=== Start Telegram Bot ===
-
-async def main(): print("🤖 Starting Telegram bot...") await client.start(phone=phone_number) print("✅ Bot connected successfully!")
-
-all_sources = await get_sources()
-
-@client.on(events.NewMessage(chats=all_sources))
+# === Message Handler ===
+@client.on(events.NewMessage(chats=SOURCE_CHANNELS))
 async def handler(event):
     message = event.message.message.strip()
+    
     match = MQM_PATTERN.search(message)
     if match:
         code = match.group()
@@ -67,8 +37,32 @@ async def handler(event):
     else:
         print("⛔ No real code found, skipped message.")
 
-print("👂 Listening for messages...")
-await client.run_until_disconnected()
+# === Web Server for Uptime (Render) ===
+PORT = 8080
+Handler = http.server.SimpleHTTPRequestHandler
 
-if name == "main": with client: client.loop.run_until_complete(main())
+class QuietHTTPRequestHandler(Handler):
+    def log_message(self, format, *args):
+        pass
 
+def start_server():
+    with socketserver.TCPServer(("0.0.0.0", PORT), QuietHTTPRequestHandler) as httpd:
+        print(f"🌐 Web server running on port {PORT}")
+        httpd.serve_forever()
+
+# Start Web Server
+thread = threading.Thread(target=start_server)
+thread.daemon = True
+thread.start()
+
+# === Start Telegram Bot ===
+async def main():
+    print("🤖 Starting Telegram bot...")
+    await client.start(phone=phone_number)
+    print("✅ Bot connected successfully!")
+    print("👂 Listening for messages...")
+    await client.run_until_disconnected()
+
+if __name__ == "__main__":
+    with client:
+        client.loop.run_until_complete(main())
