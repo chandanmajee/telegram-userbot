@@ -1,3 +1,4 @@
+     client.loop.run_until_complete(main())
 from telethon import TelegramClient, events
 import re
 import threading
@@ -10,7 +11,7 @@ api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
 phone_number = os.getenv("PHONE_NUMBER")
 
-# Source and Destination Channels
+# === Source and Destination Channels ===
 SOURCE_CHANNELS = os.getenv("SOURCE_CHANNELS").split(",")
 SOURCE_CHANNELS = [int(x) if x.isdigit() else x.strip() for x in SOURCE_CHANNELS]
 
@@ -20,12 +21,15 @@ DESTINATION_CHANNELS = [x.strip() for x in DESTINATION_CHANNELS]
 # === Pattern to Detect MQM Code ===
 MQM_PATTERN = re.compile(r"\bMQM[A-Z0-9]{5,10}\b")
 
-# === Telegram Client with Session ===
+# === Telegram Client ===
 client = TelegramClient("render_session_1", api_id, api_hash)
 
 # === Message Handler ===
 @client.on(events.NewMessage(chats=SOURCE_CHANNELS))
 async def handler(event):
+    if not event.message.message:
+        return
+
     message = event.message.message.strip()
     print(f"📥 New Message Received: {message}")
 
@@ -44,7 +48,7 @@ async def handler(event):
     else:
         print("⛔ No MQM code found in message.")
 
-# === Web Server for Uptime ===
+# === Web Server for Uptime (Render) ===
 PORT = 8080
 Handler = http.server.SimpleHTTPRequestHandler
 
@@ -57,18 +61,17 @@ def start_server():
         print(f"🌐 Web server running on port {PORT}")
         httpd.serve_forever()
 
-# Start Web Server
+# === Start Web Server in Thread ===
 thread = threading.Thread(target=start_server)
 thread.daemon = True
 thread.start()
 
-# === Start Telegram Bot ===
+# === Start Telegram Client ===
 async def main():
     print("🤖 Starting Telegram client...")
     await client.start(phone=phone_number)
     print("✅ Telegram client connected successfully!")
     print("👂 Listening for incoming messages...")
-
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
