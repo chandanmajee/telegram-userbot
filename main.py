@@ -19,7 +19,7 @@ MQM_PATTERN = re.compile(r"\bMQM[A-Z0-9]{5,10}\b")
 # === Telegram Client ===
 client = TelegramClient("session", api_id, api_hash)
 
-# === Message Handler ===
+# === Message Handler (with mono style formatting) ===
 @client.on(events.NewMessage(chats=SOURCE_CHANNELS))
 async def handler(event):
     message = event.message.message.strip()
@@ -30,7 +30,7 @@ async def handler(event):
         for dest in DESTINATION_CHANNELS:
             try:
                 entity = await client.get_entity(dest)
-                await client.send_message(entity, code)
+                await client.send_message(entity, f"`{code}`", parse_mode="markdown")
                 print(f"✅ Sent clean code: {code} to {dest}")
             except Exception as e:
                 print(f"❌ Error sending to {dest}: {e}")
