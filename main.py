@@ -1,4 +1,9 @@
-from telethon import TelegramClient, events import re import threading import http.server import socketserver import os
+from telethon import TelegramClient, events
+import re
+import threading
+import http.server
+import socketserver
+import os
 
 === Get from Environment Variables ===
 
