@@ -10,7 +10,10 @@ api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
 phone_number = os.getenv("PHONE_NUMBER")
 
+# === Handle both channel usernames and IDs ===
 SOURCE_CHANNELS = os.getenv("SOURCE_CHANNELS").split(",")
+SOURCE_CHANNELS = [int(x.strip()) if x.strip().isdigit() else x.strip() for x in SOURCE_CHANNELS]
+
 DESTINATION_CHANNELS = os.getenv("DESTINATION_CHANNELS").split(",")
 
 # === Pattern to Detect MQM Code ===
@@ -30,7 +33,7 @@ async def handler(event):
         for dest in DESTINATION_CHANNELS:
             try:
                 entity = await client.get_entity(dest)
-                await client.send_message(entity, f"`{code}`", parse_mode="markdown")
+                await client.send_message(entity, f"`{code}`", parse_mode="markdown")  # mono style
                 print(f"✅ Sent clean code: {code} to {dest}")
             except Exception as e:
                 print(f"❌ Error sending to {dest}: {e}")
